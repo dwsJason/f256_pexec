@@ -15,7 +15,7 @@
 		mx %11
 
 ; some Kernel Stuff
-		put ../kernel/api.s
+		put kernel_api.s
 
 ; Kernel uses MMU configurations 0 and 1
 ; User programs default to # 3
