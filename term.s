@@ -22,6 +22,8 @@ term_temp1  ds 4
 ;TermPrintAI    - print value in A, as DEC
 ;TermPrintAXH   - print value in AX, as HEX  (it will end up XA, because high, then low)
 ;TermPrintAXI   - print value in AX, as DEC
+;TermPrintAXYH  - print values in AXY, as HEX
+;TermSetXY      - cursor position X in X, Y in Y
 
 ;------------------------------------------------------------------------------
 TermInit
@@ -228,6 +230,18 @@ TermPUTS
 		rts
 
 ;------------------------------------------------------------------------------
+;TermPrintAXH   - print value in AX, as HEX  (it will end up XA, because high, then low)
+TermPrintAXYH
+		pha
+		phx
+		tya
+		jsr TermPrintAH
+		pla
+		jsr TermPrintAH
+		pla
+;		bra TermPrintAH
+
+;------------------------------------------------------------------------------
 ;TermPrintAH    - print value in A, as HEX
 TermPrintAH
 		pha
@@ -271,6 +285,7 @@ TermPrintAI
 		and #$0F
 		beq :skip
 		jsr TermPrintAN
+		lda :bcd
 		bra TermPrintAH
 :skip
 		lda :bcd
