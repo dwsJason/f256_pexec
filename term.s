@@ -79,7 +79,7 @@ TermCOUT
 		lda term_y
 		inc
 		cmp term_height
-		bcs :scroll
+		bcs :scroll_savexy
 :y      sta term_y
 
 		lda #0
