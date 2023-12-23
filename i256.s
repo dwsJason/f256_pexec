@@ -217,6 +217,9 @@ decompress_pixels
 		dec i256_blobCount
 		bne ]loop
 
+		clc
+		lda #0	; return no error
+
 		rts
 
 ;
