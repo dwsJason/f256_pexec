@@ -484,6 +484,8 @@ launchProgram
 
 		jsr mmu_lock
 
+		jsr fclose
+
 		jmp temp0
 ;-----------------------------------------------------------------------------
 load_image
@@ -631,7 +633,7 @@ get_arg
 
 ;------------------------------------------------------------------------------
 ; Strings and other includes
-txt_version asc 'Pexec 0.02'
+txt_version asc 'Pexec 0.03'
 		db 13,13,0
 
 txt_press_key db 13
