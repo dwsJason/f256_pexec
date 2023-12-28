@@ -8,6 +8,7 @@
 ;
 ;         Load->Run PGX files
 ;         Load->Run PGZ files
+;         Load->Run KUP files
 ;         Load-Display 256 Picture files
 ;         Load-Display LBM Picture files
 ;  
@@ -255,12 +256,30 @@ execute_file
 		beq :256
 		cmp #'F'
 		beq :lbm
+		cmp #$F2
+		beq :kup
 :done
 		lda #<txt_unknown
 		ldx #>txt_unknown
 		jsr TermPUTS
 
 		rts
+
+;------------------------------------------------------------------------------
+; Load /run KUP (Kernel User Program)
+:kup
+		lda temp0+1
+		cmp #$56
+		bne :done
+		lda temp0+2 	; size in blocks
+		beq :done   	; size 0, invalid
+		cmp #6
+		bcs :done       ; size larger than 40k, invalid
+		lda temp0+3		; address mapping of block
+		beq	:done       ; can't map you in at block 0
+		cmp #6
+		bcs :done		; can't map you in at block 6 or higher
+		jmp LoadKUP
 
 ;------------------------------------------------------------------------------
 ; Load / run pgZ Program
@@ -495,6 +514,56 @@ pgzDoneLoad
 		sta temp1+1
 
 		jmp launchProgram  ; share cleanup with PGX launcher
+
+;-----------------------------------------------------------------------------
+; Load /run KUP (Kernel User Program)
+LoadKUP
+		; Open the File again (seek back to 0)
+		lda	#1
+		jsr	get_arg
+		jsr TermPUTS
+
+		lda	#1
+		jsr	get_arg
+		jsr fopen 
+
+; Set the address where we read data
+
+		lda temp0+3 ; mount address
+		clc
+		ror
+		ror
+		ror
+		ror
+		tax
+		lda #0
+		tay
+
+		sta temp0		; start address of where we're loading
+		stx temp0+1
+
+		jsr set_write_address
+
+; Now ask for data from the file, let's be smart here, and ask for the
+; max conceivable size that will fit.
+
+		sec
+		lda #$C0
+		sbc temp0+1
+		tax			; Should yield $A000 as largest possible address
+		lda #0      ;
+		tay
+		jsr fread
+
+		ldy #4
+		lda (temp0),y
+		sta temp1
+		iny
+		lda (temp0),y
+		sta temp1+2
+
+		jmp launchProgram	; close, fix mmu, start
+
 
 ;-----------------------------------------------------------------------------
 load_image
