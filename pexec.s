@@ -64,7 +64,9 @@ event_file_data_wrote = event_type+kernel_event_event_t_file_wrote_wrote
 args_buf = $40
 args_buflen = $42
 
-old_sp = $A0
+; copy of the mmu_lock function, down to zero page
+
+mmu_lock_springboard = $80
 
 ; File uses $B0-$BF
 ; Term uses $C0-$CF
@@ -93,11 +95,6 @@ sig		db $f2,$56		; signature
 		db 0
 
 start
-		;tsx
-		;stx old_sp
-		;ldx #$FF
-		;txs
-
 		; store argument list, but skip over first argument (us)
 		lda	kernel_args_ext
 		clc
@@ -364,12 +361,32 @@ LoadPGX
 		tax
 		ldy #1
 		jsr fread
-		jsr fclose
+
+launchProgram
+		jsr fclose	; close PGX or PGZ
 		
-		jsr mmu_lock
+		lda #5
+		sta old_mmu0+5	; when lock is called it will map $A000 to physcial $A000
+
+		; need to place a copy of mmu_lock, where it won't be unmapped
+		ldx #mmu_lock_end-mmu_unlock
+]lp		lda mmu_lock,x
+		sta mmu_lock_springboard,x
+		dex
+		bpl ]lp
+
+		; construct more stub code
+		lda #$20   ; jsr mmu_lock_springboard
+		sta temp0
+		lda #<mmu_lock_springboard
+		sta temp0+1
+		lda #>mmu_lock_springboard
+		sta temp0+2 
 
 		lda #$4c
-		sta temp1-1
+		sta temp1-1  ; same as temp0+3
+
+		; temp1, and temp1+1 contain the start address
 
 		lda args_buf
 		sta kernel_args_ext
@@ -378,7 +395,7 @@ LoadPGX
 		lda args_buflen
 		sta kernel_args_extlen
 		
-		jmp temp1-1
+		jmp temp0	; will jsr mmu_lock, then jmp to the start
 
 ;-----------------------------------------------------------------------------
 LoadPGz
@@ -406,7 +423,7 @@ LoadPGz
 		ora PGz_size+1
 		ora PGz_size+2
 		ora PGz_size+3
-		beq launchProgram
+		beq pgzDoneLoad
 		
 		lda PGz_addr
 		ldx PGz_addr+1
@@ -424,8 +441,6 @@ LoadPGz
 		jsr set_write_address
 		lda #8
 		bra ]loop
-
-		bra launchProgram
 
 ;-----------------------------------------------------------------------------
 LoadPGZ
@@ -452,7 +467,7 @@ LoadPGZ
 		lda temp1
 		ora temp1+1
 		ora temp1+2
-		beq launchProgram
+		beq pgzDoneLoad
 		
 		lda temp0+1
 		ldx temp0+2
@@ -471,22 +486,16 @@ LoadPGZ
 		lda #6
 		bra ]loop
 
-launchProgram
-		lda #$4c
-		sta temp0
+pgzDoneLoad
 
-		lda args_buf
-		sta kernel_args_ext
-		lda args_buf+1
-		sta kernel_args_ext+1
-		lda args_buflen
-		sta kernel_args_extlen
+		; copy the start location, for the launch code fragment 
+		lda temp0+1
+		sta temp1
+		lda temp0+2
+		sta temp1+1
 
-		jsr mmu_lock
+		jmp launchProgram  ; share cleanup with PGX launcher
 
-		jsr fclose
-
-		jmp temp0
 ;-----------------------------------------------------------------------------
 load_image
 ; $10000, for the bitmap
@@ -633,7 +642,7 @@ get_arg
 
 ;------------------------------------------------------------------------------
 ; Strings and other includes
-txt_version asc 'Pexec 0.03'
+txt_version asc 'Pexec 0.5'
 		db 13,13,0
 
 txt_press_key db 13

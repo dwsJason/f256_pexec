@@ -81,6 +81,7 @@ mmu_lock
 		lda old_mmu_ctrl
 		sta mmu_ctrl
 		rts
+mmu_lock_end
 
 ; Set system bus address for reading
 ;
