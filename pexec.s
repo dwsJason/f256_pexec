@@ -707,8 +707,6 @@ get_arg
 		rts
 
 
-
-
 ;------------------------------------------------------------------------------
 ; Strings and other includes
 txt_version asc 'Pexec 0.5'
@@ -747,8 +745,9 @@ txt_no_argument asc 'Missing file argument'
 		put i256.s
 		put lzsa2.s
 		put file.s
+		put glyphs.s
 
 ; pad to the end
 		ds $C000-*,$EA
 ; really pad to end, because merlin is buggy
-		ds \
+		ds \,$EA

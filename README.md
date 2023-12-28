@@ -5,7 +5,7 @@ pgz - launcher
 
 pgx - launcher
 
-kup - launcher
+kup - launcher (EXPERIMENTAL)
 
 lbm - image viewer (8bit 256 color only)
 
