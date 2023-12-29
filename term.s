@@ -173,18 +173,28 @@ TermClearTextBuffer
 		ldx #79
 ]cloop  lda #$12  			; red
 		sta $C000+{80*1},x
+		sta $C000+{80*51},x
 		lda #$92			; orange
 		sta $C000+{80*2},x
+		sta $C000+{80*52},x
 		lda #$D2			; yello
 		sta $C000+{80*3},x
+		sta $C000+{80*53},x
 		lda #$C2			; green
 		sta $C000+{80*4},x
+		sta $C000+{80*54},x
 		lda #$72			; bright blue
 		sta $C000+{80*5},x
+		sta $C000+{80*55},x
 		lda #$32		   	; purple
 		sta $C000+{80*6},x
+		sta $C000+{80*56},x
 		lda #$B2		  	; pink
 		sta $C000+{80*7},x
+		sta $C000+{80*57},x
+		lda #$A2		  	; grey
+		sta $C000+{80*8},x
+		sta $C000+{80*58},x
 		dex
 		bpl ]cloop
 
