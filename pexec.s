@@ -683,7 +683,7 @@ init320x240
 		stz io_ctrl
 
 		; enable the graphics mode
-		lda #%00001111	; gamma + bitmap + graphics + overlay + text
+		lda #%01001111	; gamma + bitmap + graphics + overlay + text
 ;		lda #%00000001	; text
 		sta $D000
 		;lda #%110       ; text in 40 column when it's enabled

@@ -171,19 +171,19 @@ TermClearTextBuffer
 ; We need a rainbow up top
 
 		ldx #79
-]cloop  lda #$10  			; red
+]cloop  lda #$12  			; red
 		sta $C000+{80*1},x
-		lda #$90			; orange
+		lda #$92			; orange
 		sta $C000+{80*2},x
-		lda #$D0			; yello
+		lda #$D2			; yello
 		sta $C000+{80*3},x
-		lda #$C0			; green
+		lda #$C2			; green
 		sta $C000+{80*4},x
-		lda #$70			; bright blue
+		lda #$72			; bright blue
 		sta $C000+{80*5},x
-		lda #$30		   	; purple
+		lda #$32		   	; purple
 		sta $C000+{80*6},x
-		lda #$B0		  	; pink
+		lda #$B2		  	; pink
 		sta $C000+{80*7},x
 		dex
 		bpl ]cloop
