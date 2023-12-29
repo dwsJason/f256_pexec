@@ -1,10 +1,14 @@
 ;
 ; Glyphs, custom glphs to make pexec pretty
 ;
-
 ;------------------------------------------------------------------------------
 
-	dum 0
+	mx %11
+
+	dum 1
+
+G_SPACE ds 1
+
 GC ds 1
 GE ds 1
 GO ds 1
@@ -19,8 +23,31 @@ GRUN3 ds 1
 	dend
 
 ;------------------------------------------------------------------------------
+glyph_puts
+
+:pString = term_temp2
+
+	sta :pString
+	stx :pString+1
+
+]lp	lda (:pString)
+	beq :done
+	jsr glyph_draw
+	inc :pString
+	bne ]lp
+	inc :pString+1
+	bra ]lp
+:done
+	rts
+
+;------------------------------------------------------------------------------
 
 glyph_draw
+	ldx term_ptr
+	phx
+	ldx term_ptr+1
+	phx
+
 	ldx term_x
 	phx
 	ldx term_y
@@ -32,21 +59,46 @@ glyph_draw
 	tax
 
 	; c = 0
-]lp lda glyphs,x
-	jsr :emit_line
+	ldy #7
 
+]lp lda glyphs-8,x ;-8 because 0 is terminator
+	phy
+	phx
+	jsr :emit_line
+	plx
+	ply
+
+	; c=1
 	lda term_ptr
-	adc #80
+	adc #80-1
 	sta term_ptr
 	lda term_ptr+1
 	adc #0
 	sta term_ptr+1
 
 	inx
-	cpx #8     	; for size we could make this 7
-	bcc ]lp
+	dey
+	bpl ]lp
 
-	rts 		; then remove this rts
+	plx
+	stx term_y
+	ply
+	sty term_x
+
+	pla
+	sta term_ptr+1
+
+	pla
+	sta term_ptr
+
+	lda term_ptr
+	adc #9 			; c=0
+	sta term_ptr
+	lda term_ptr+1
+	adc #0
+	sta term_ptr+1
+
+	rts
 
 :emit_line
 	ldy #0
@@ -70,6 +122,16 @@ glyph_draw
 ;------------------------------------------------------------------------------
 
 glyphs
+
+space_glyph			; useful for "erase"
+	db %00000000
+	db %00000000
+	db %00000000
+	db %00000000
+	db %00000000
+	db %00000000
+	db %00000000
+	db %00000000
 
 
 c_glyph
@@ -137,34 +199,34 @@ x_glyph
 
 
 run0
+	db %00011000
+	db %00011000
 	db %00110000
 	db %00110000
-	db %01100000
-	db %01100000
+	db %00111000
 	db %01110000
-	db %11100000
-	db %01100000
-	db %01000000
+	db %00110000
+	db %00100000
 
 run1
+	db %00011000
+	db %00011000
 	db %00110000
 	db %00110000
-	db %01100000
-	db %01100000
-	db %01100000
-	db %01100000
-	db %01100000
-	db %01000000
+	db %00110000
+	db %00110000
+	db %00110000
+	db %00100000
 
 run2
+	db %00001100
+	db %00001100
 	db %00011000
-	db %00011000
-	db %00110000
-	db %01110000
-	db %01111000
 	db %00111000
-	db %01001000
-	db %01000000
+	db %00111100
+	db %00011100
+	db %00100100
+	db %00100000
 
 run3
 	db %00001100
@@ -175,28 +237,6 @@ run3
 	db %00100100
 	db %01000100
 	db %00000100
-
-
-;------------------------------------------------------------------------------
-; put the super basic colors into the text buffer
-; so it's consistent
-_palette
-            adrl  $ff000000
-			adrl  $ffffffff
-			adrl  $ff880000
-			adrl  $ffaaffee
-			adrl  $ffcc44cc
-			adrl  $ff00cc55
-			adrl  $ff0000aa
-			adrl  $ffdddd77
-			adrl  $ffdd8855
-			adrl  $ff664400
-			adrl  $ffff7777
-			adrl  $ff333333
-			adrl  $ff777777
-			adrl  $ffaaff66
-			adrl  $ff0088ff
-			adrl  $ffbbbbbb
 
 ;------------------------------------------------------------------------------
 

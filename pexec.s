@@ -65,6 +65,17 @@ event_file_data_wrote = event_type+kernel_event_event_t_file_wrote_wrote
 args_buf = $40
 args_buflen = $42
 
+	dum $70
+temp7 ds 4
+temp8 ds 4
+temp9 ds 4
+temp10 ds 4
+
+progress ds 2     ; progress counter
+show_prompt ds 1  ; picture viewer can hide the press key prompt
+	dend
+
+
 ; copy of the mmu_lock function, down to zero page
 
 mmu_lock_springboard = $80
@@ -110,7 +121,13 @@ start
 		dec
 		sta	args_buflen
 
+		; Some variable initialization
+		stz progress
+		stz progress+1
+		stz show_prompt  ; default to show the press key prompt
+
 		; Terminal Init
+		jsr initColors	; default the color palette
 		jsr TermInit
 
 		; mmu help functions are alive
@@ -121,7 +138,32 @@ start
 		ldx #>txt_version
 		jsr TermPUTS
 
+
+		; giant text test
+
+		ldx #16
+		ldy #1
+		jsr TermSetXY
+
+		lda #<txt_glyph_pexec
+		ldx #>txt_glyph_pexec
+		jsr glyph_puts
+
+		; load stuff banner
+		ldx #16
+		ldy #8
+		jsr TermSetXY
+
+		lda #<txt_load_stuff
+		ldx #>txt_load_stuff
+		jsr TermPUTS
+
+
 		; Display what we're trying to do
+		ldx #0
+		ldy #10
+		jsr TermSetXY
+
 		lda #<txt_launch
 		ldx #>txt_launch
 		jsr TermPUTS
@@ -213,12 +255,16 @@ start
 :got4
 		jsr execute_file
 
-		; $$DO SOMETHING
-
 wait_for_key
+
+		lda show_prompt
+		bne :skip_prompt
+
 		lda #<txt_press_key
 		ldx #>txt_press_key
 		jsr TermPUTS
+
+:skip_prompt
 
 ]loop
 		lda #<event_type
@@ -236,8 +282,7 @@ wait_for_key
 		;jsr TermPrintAH
 		bra ]loop
 :done
-		jmp mmu_lock
-		rts
+		jmp mmu_lock   ; jsr+rts
 
 ;------------------------------------------------------------------------------
 ;
@@ -320,7 +365,10 @@ execute_file
 		jsr init320x240
 		jsr set_srcdest_pixels
 		jsr decompress_pixels
-		rts
+
+		inc show_prompt   ; don't show prompt
+
+		jmp TermClearTextBuffer  ; jsr+rts
 ;
 :lbm
 		lda temp0+1
@@ -353,7 +401,9 @@ execute_file
 		jsr set_srcdest_pixels
 		jsr lbm_decompress_pixels
 
-		rts
+		inc show_prompt   ; don't show prompt
+
+		jmp TermClearTextBuffer  ; jsr+rts
 ;-----------------------------------------------------------------------------
 LoadPGX
 		lda #<temp0
@@ -659,7 +709,7 @@ init320x240
 		stz io_ctrl
 
 		; enable the graphics mode
-		lda #%00001111	; gamma + bitmap + graphics + overlay + text
+		lda #%01001111	; gamma + bitmap + graphics + overlay + text
 ;		lda #%00000001	; text
 		sta $D000
 		;lda #%110       ; text in 40 column when it's enabled
@@ -706,10 +756,68 @@ get_arg
 		lda (kernel_args_ext),y
 		rts
 
+;------------------------------------------------------------------------------
+;
+;
+ProgressIndicator 
+
+		lda #'.'
+		jsr TermCOUT
+
+		dec progress+1
+		bpl :return
+
+		lda #16
+		sta progress+1
+
+		ldx term_x
+		phx
+		ldy term_y
+		phy
+
+		clc
+		lda progress
+		inc
+		cmp #64
+		bcc :no_wrap
+
+		dec
+		adc #4
+		tax
+
+		ldy #51
+		jsr TermSetXY
+
+		lda #G_SPACE 	 ; erase the dude
+		jsr glyph_draw
+		
+		clc
+		lda #0     		 ; wrap to left
+:no_wrap
+		sta progress
+		adc #5
+		tax
+
+		ldy #51
+		jsr TermSetXY
+
+		clc
+		lda progress
+		and #$3
+		adc #GRUN0
+
+		jsr glyph_draw   	; running man
+
+		ply
+		plx
+		jsr TermSetXY
+
+:return
+		rts
 
 ;------------------------------------------------------------------------------
 ; Strings and other includes
-txt_version asc 'Pexec 0.5'
+txt_version asc 'Pexec 0.6'
 		db 13,13,0
 
 txt_press_key db 13
@@ -739,6 +847,13 @@ txt_no_argument asc 'Missing file argument'
 		db 13
 		db 0
 
+txt_load_stuff asc 'Load your stuff: .pgx, .pgz, .kup, .lbm, .256',00
+
+
+txt_glyph_pexec
+		db GP,GE,GX,GE,GC,0
+
+;------------------------------------------------------------------------------
 		put mmu.s
 		put term.s
 		put lbm.s
@@ -746,6 +861,7 @@ txt_no_argument asc 'Missing file argument'
 		put lzsa2.s
 		put file.s
 		put glyphs.s
+		put colors.s
 
 ; pad to the end
 		ds $C000-*,$EA
