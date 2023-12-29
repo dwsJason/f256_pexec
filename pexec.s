@@ -65,6 +65,14 @@ event_file_data_wrote = event_type+kernel_event_event_t_file_wrote_wrote
 args_buf = $40
 args_buflen = $42
 
+	dum $70
+temp7 ds 4
+temp8 ds 4
+temp9 ds 4
+temp10 ds 4
+	dend
+
+
 ; copy of the mmu_lock function, down to zero page
 
 mmu_lock_springboard = $80
@@ -111,6 +119,7 @@ start
 		sta	args_buflen
 
 		; Terminal Init
+		jsr initColors	; default the color palette
 		jsr TermInit
 
 		; mmu help functions are alive
@@ -120,6 +129,21 @@ start
 		lda #<txt_version
 		ldx #>txt_version
 		jsr TermPUTS
+
+
+		; giant text test
+
+		ldx #16
+		ldy #1
+		jsr TermSetXY
+
+		lda #<txt_glyph_pexec
+		ldx #>txt_glyph_pexec
+		jsr glyph_puts
+
+		ldx #0
+		ldy #10
+		jsr TermSetXY
 
 		; Display what we're trying to do
 		lda #<txt_launch
@@ -709,7 +733,7 @@ get_arg
 
 ;------------------------------------------------------------------------------
 ; Strings and other includes
-txt_version asc 'Pexec 0.5'
+txt_version asc 'Pexec 0.6'
 		db 13,13,0
 
 txt_press_key db 13
@@ -739,6 +763,10 @@ txt_no_argument asc 'Missing file argument'
 		db 13
 		db 0
 
+txt_glyph_pexec
+		db GP,GE,GX,GE,GC,0
+
+;------------------------------------------------------------------------------
 		put mmu.s
 		put term.s
 		put lbm.s
@@ -746,6 +774,7 @@ txt_no_argument asc 'Missing file argument'
 		put lzsa2.s
 		put file.s
 		put glyphs.s
+		put colors.s
 
 ; pad to the end
 		ds $C000-*,$EA

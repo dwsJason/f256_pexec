@@ -164,8 +164,29 @@ TermClearTextBuffer
 
 		lda #3
 		sta io_ctrl         ; swap in the color memory
-		lda $C000			; get current color attribute
+		;lda $C000			; get current color attribute
+		lda #$F2	; white on blue
 		jsr	:clear
+
+; We need a rainbow up top
+
+		ldx #79
+]cloop  lda #$10  			; red
+		sta $C000+{80*1},x
+		lda #$90			; orange
+		sta $C000+{80*2},x
+		lda #$D0			; yello
+		sta $C000+{80*3},x
+		lda #$C0			; green
+		sta $C000+{80*4},x
+		lda #$70			; bright blue
+		sta $C000+{80*5},x
+		lda #$30		   	; purple
+		sta $C000+{80*6},x
+		lda #$B0		  	; pink
+		sta $C000+{80*7},x
+		dex
+		bpl ]cloop
 
 		lda #2
 		sta io_ctrl         ; swap in the text memory
