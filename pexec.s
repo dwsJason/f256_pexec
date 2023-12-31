@@ -438,7 +438,7 @@ launchProgram
 		sta old_mmu0+5	; when lock is called it will map $A000 to physcial $A000
 
 		; need to place a copy of mmu_lock, where it won't be unmapped
-		ldx #mmu_lock_end-mmu_unlock
+		ldx #mmu_lock_end-mmu_lock
 ]lp		lda mmu_lock,x
 		sta mmu_lock_springboard,x
 		dex
@@ -817,7 +817,7 @@ ProgressIndicator
 
 ;------------------------------------------------------------------------------
 ; Strings and other includes
-txt_version asc 'Pexec 0.6'
+txt_version asc 'Pexec 0.61'
 		db 13,13,0
 
 txt_press_key db 13
