@@ -12,6 +12,7 @@ lbm - image viewer (8bit 256 color only)
 256 - image viewer (320x200 or 320x240)
 
 Written by dwsJason and csoren
+Foenix Retro Systems logo by econtrerasd
 
 Do not load data in these memory address ranges:
 
@@ -35,15 +36,14 @@ KUP programs limited to start addresses in Slot 1-5, and a maximum size of 40k
 Why aren't we at 1.0, we are missing these features, if anyone wants to
 contribute.
 
-	 - Support for device #'s beyond 0
+     - Support for device #'s beyond 0
 
-     	 - File Chooser (if no args passed, or file not found this would be
-	   really nice.  Something like Bitsy Bye for those familiar)
+     - File Chooser (if no args passed, or file not found this would be
+       really nice.  Something like Bitsy Bye for those familiar)
 
-	 - Image viewer needs error checking
+     - Image viewer needs error checking
 
-	 - KUP program runner, needs more testing
+     - get the filesize (direntry), for an accurate loading bar
 
-  	 - Use seek command, to avoid opening/closing/opening files again, and to get the filesize, for an accurate loading bar
+     - better file validation 
     
-
