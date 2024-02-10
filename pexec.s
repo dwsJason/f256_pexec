@@ -117,9 +117,21 @@ start
 		sta	args_buf+1
 
 		lda	kernel_args_extlen
+		beq :zero_args				; validation, this should not be zero, but we'll accept it
 		dec
-		dec
-		sta	args_buflen
+		dec 						; subtract 2 - we get rid of "pexec" from the args list
+		bmi :zero_args              ; this is supposed to be positive
+		bit #1  		
+		bne :zero_args				; this is expected to be even
+
+		sta	args_buflen 			; we've done some reasonable validation here
+		bra :seems_good_args
+
+:zero_args
+		stz args_buflen
+		stz kernel_args_extlen
+
+:seems_good_args
 
 		; Some variable initialization
 		stz progress
@@ -862,6 +874,7 @@ txt_glyph_pexec
 		put file.s
 		put glyphs.s
 		put colors.s
+		put logo.s
 
 ; pad to the end
 		ds $C000-*,$EA
