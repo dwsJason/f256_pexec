@@ -65,7 +65,7 @@ event_file_data_wrote = event_type+kernel_event_event_t_file_wrote_wrote
 args_buf = $40
 args_buflen = $42
 
-	dum $70
+	dum $60
 temp7 ds 4
 temp8 ds 4
 temp9 ds 4
@@ -73,6 +73,8 @@ temp10 ds 4
 
 progress ds 2     ; progress counter
 show_prompt ds 1  ; picture viewer can hide the press key prompt
+
+pArg ds 2
 	dend
 
 
@@ -213,10 +215,42 @@ start
 				 
 		; Set the drive
 		; currently hard-coded to drive 0, since drive not passed
-		; stz kernel_args_file_open_drive
+		stz file_open_drive
+
 		; Set the Filename
 		lda	#1
 		jsr	get_arg
+
+		; we have a chance here to change the drive
+		sta pArg
+		stx pArg+1
+
+		ldy #1
+		lda (pArg),y
+		cmp #':'
+		bne :no_device_passed_in
+
+		; OMG there's a device!
+		; if it's valid, maybe it can overide the device 0
+
+		lda <pArg
+		pha
+		clc
+		adc #2
+		sta <pArg 		; fuck you if we need to wrap a page
+
+		pla
+		sec
+		sbc #'0'
+		cmp #10
+		bcs :no_device_passed_in ; fucked up, so just use device 0
+
+		sta file_open_drive
+
+:no_device_passed_in
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen
 		bcc :opened
 		; failed
@@ -425,8 +459,9 @@ LoadPGX
 		ldy #^temp0
 		jsr set_write_address
 		
-		lda	#1
-		jsr	get_arg
+		lda	pArg
+		ldx pArg+1
+
 		jsr fopen
 
 		lda #8
@@ -487,8 +522,9 @@ LoadPGz
 		jsr	get_arg
 		jsr TermPUTS
 
-		lda	#1
-		jsr	get_arg
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen
 		
 		lda #<PGz_z
@@ -532,8 +568,9 @@ LoadPGZ
 		jsr	get_arg
 		jsr TermPUTS
 
-		lda	#1
-		jsr	get_arg
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen
 		
 		lda #<temp0
@@ -587,8 +624,9 @@ LoadKUP
 		jsr	get_arg
 		jsr TermPUTS
 
-		lda	#1
-		jsr	get_arg
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen 
 
 ; Set the address where we read data
@@ -638,8 +676,9 @@ load_image
 		jsr	get_arg
 		jsr TermPUTS
 
-		lda	#1
-		jsr	get_arg
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen
 
 		; Address where we're going to load the file
@@ -831,7 +870,7 @@ ProgressIndicator
 
 ;------------------------------------------------------------------------------
 ; Strings and other includes
-txt_version asc 'Pexec 0.61'
+txt_version asc 'Pexec 0.631'
 		db 13,13,0
 
 txt_press_key db 13
