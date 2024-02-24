@@ -36,9 +36,6 @@ KUP programs limited to start addresses in Slot 1-5, and a maximum size of 40k
 Why aren't we at 1.0, we are missing these features, if anyone wants to
 contribute.
 
-     - friendlier exe name support (if file doesn't exist, try some extenstions
-     - like .pgz, or .pgx to see if they exist)
-
      - PATH support
 
      - File Chooser (if no args passed, or file not found this would be

@@ -75,8 +75,14 @@ progress ds 2     ; progress counter
 show_prompt ds 1  ; picture viewer can hide the press key prompt
 
 pArg ds 2
+pExt ds 2		  ; used by the alternate_open
 	dend
 
+
+	dum $400
+scratch_path ds 256
+try_count ds 1
+	dend
 
 ; copy of the mmu_lock function, down to zero page
 
@@ -254,6 +260,11 @@ start
 		jsr fopen
 		bcc :opened
 		; failed
+
+		; Micah suggested we make life easier, so we don't require the extension
+		; sounds good to me
+		jsr alternate_open
+		bcc :opened
 
 		pha
 		lda #<txt_error_open
@@ -869,8 +880,84 @@ ProgressIndicator
 		rts
 
 ;------------------------------------------------------------------------------
+;
+; We get here, because we got a kernel error when trying to open
+; this could mean file is not found, so let's try to find the file
+; to make life easier
+;
+; return c=0 if no error
+;
+alternate_open
+		pha				; preserve the initial error
+		stz try_count
+]try
+		jsr :copy_to_scratch
+		jsr :append_ext
+
+		lda #<scratch_path
+		ldx #>scratch_path
+		jsr fopen
+		bcc :opened
+
+		; this path didn't work
+		inc try_count
+		lda try_count
+		cmp #5 				; there are 5 extensions
+		bcc ]try
+; we failed 4 more times :-(
+		pla
+		rts
+
+:opened
+		lda #<scratch_path
+		ldx #>scratch_path
+		sta pArg  			; make sure when the file is re-opened it uses this working path
+		stx pArg+1
+
+		pla				; restore original error
+:rts
+		rts
+
+:append_ext
+		; at this point y points at the 0 terminator in the scratch path
+		lda try_count
+		asl
+		asl
+		tax
+]ext_loop
+		lda |ext_table,x
+		sta |scratch_path,y
+		beq :rts
+		inx
+		iny
+		bra ]ext_loop
+
+:copy_to_scratch
+		ldy #0
+]lp		lda (pArg),y
+		sta |scratch_path,y
+		beq :done_copy
+		iny
+		bne ]lp
+		; if we get here, things are fubar
+		dey
+		lda #0
+		sta |scratch_path,y
+		rts
+
+:done_copy
+		lda #'.'
+		sta |scratch_path,y  ; replace the 0 terminator
+		iny
+
+		lda #0
+		sta |scratch_path,y  ; zero terminate
+		rts
+
+
+;------------------------------------------------------------------------------
 ; Strings and other includes
-txt_version asc 'Pexec 0.631'
+txt_version asc 'Pexec 0.64'
 		db 13,13,0
 
 txt_press_key db 13
@@ -899,6 +986,14 @@ txt_open asc 'Open Success!'
 txt_no_argument asc 'Missing file argument'
 		db 13
 		db 0
+;------------------------------
+ext_table
+txt_pgz asc 'pgz',00
+txt_pgx asc 'pgx',00
+txt_kup asc 'kup',00
+txt_256 asc '256',00
+txt_lbm asc 'lbm',00
+;------------------------------
 
 txt_load_stuff asc 'Load your stuff: .pgx, .pgz, .kup, .lbm, .256',00
 
