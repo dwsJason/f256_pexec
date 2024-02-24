@@ -260,6 +260,8 @@ start
 		ldx #>txt_error_reading
 		jsr TermPUTS
 
+		pla
+
 		jsr TermPrintAH
 		jsr TermCR
 
