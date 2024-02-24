@@ -65,7 +65,7 @@ event_file_data_wrote = event_type+kernel_event_event_t_file_wrote_wrote
 args_buf = $40
 args_buflen = $42
 
-	dum $70
+	dum $60
 temp7 ds 4
 temp8 ds 4
 temp9 ds 4
@@ -73,8 +73,16 @@ temp10 ds 4
 
 progress ds 2     ; progress counter
 show_prompt ds 1  ; picture viewer can hide the press key prompt
+
+pArg ds 2
+pExt ds 2		  ; used by the alternate_open
 	dend
 
+
+	dum $400
+scratch_path ds 256
+try_count ds 1
+	dend
 
 ; copy of the mmu_lock function, down to zero page
 
@@ -117,9 +125,21 @@ start
 		sta	args_buf+1
 
 		lda	kernel_args_extlen
+		beq :zero_args				; validation, this should not be zero, but we'll accept it
 		dec
-		dec
-		sta	args_buflen
+		dec 						; subtract 2 - we get rid of "pexec" from the args list
+		bmi :zero_args              ; this is supposed to be positive
+		bit #1  		
+		bne :zero_args				; this is expected to be even
+
+		sta	args_buflen 			; we've done some reasonable validation here
+		bra :seems_good_args
+
+:zero_args
+		stz args_buflen
+		stz kernel_args_extlen
+
+:seems_good_args
 
 		; Some variable initialization
 		stz progress
@@ -201,13 +221,48 @@ start
 				 
 		; Set the drive
 		; currently hard-coded to drive 0, since drive not passed
-		; stz kernel_args_file_open_drive
+		stz file_open_drive
+
 		; Set the Filename
 		lda	#1
 		jsr	get_arg
+
+		; we have a chance here to change the drive
+		sta pArg
+		stx pArg+1
+
+		ldy #1
+		lda (pArg),y
+		cmp #':'
+		bne :no_device_passed_in
+
+		; OMG there's a device!
+		; if it's valid, maybe it can overide the device 0
+
+		lda (pArg)
+
+		inc <pArg
+		inc <pArg 		; fuck you if we need to wrap a page
+
+		sec
+		sbc #'0'
+		cmp #10
+		bcs :no_device_passed_in ; fucked up, so just use device 0
+
+		sta file_open_drive
+
+:no_device_passed_in
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen
 		bcc :opened
 		; failed
+
+		; Micah suggested we make life easier, so we don't require the extension
+		; sounds good to me
+		jsr alternate_open
+		bcc :opened
 
 		pha
 		lda #<txt_error_open
@@ -247,6 +302,8 @@ start
 		lda #<txt_error_reading
 		ldx #>txt_error_reading
 		jsr TermPUTS
+
+		pla
 
 		jsr TermPrintAH
 		jsr TermCR
@@ -411,8 +468,9 @@ LoadPGX
 		ldy #^temp0
 		jsr set_write_address
 		
-		lda	#1
-		jsr	get_arg
+		lda	pArg
+		ldx pArg+1
+
 		jsr fopen
 
 		lda #8
@@ -473,8 +531,9 @@ LoadPGz
 		jsr	get_arg
 		jsr TermPUTS
 
-		lda	#1
-		jsr	get_arg
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen
 		
 		lda #<PGz_z
@@ -518,8 +577,9 @@ LoadPGZ
 		jsr	get_arg
 		jsr TermPUTS
 
-		lda	#1
-		jsr	get_arg
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen
 		
 		lda #<temp0
@@ -573,8 +633,9 @@ LoadKUP
 		jsr	get_arg
 		jsr TermPUTS
 
-		lda	#1
-		jsr	get_arg
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen 
 
 ; Set the address where we read data
@@ -624,8 +685,9 @@ load_image
 		jsr	get_arg
 		jsr TermPUTS
 
-		lda	#1
-		jsr	get_arg
+		lda pArg
+		ldx pArg+1
+
 		jsr fopen
 
 		; Address where we're going to load the file
@@ -816,8 +878,84 @@ ProgressIndicator
 		rts
 
 ;------------------------------------------------------------------------------
+;
+; We get here, because we got a kernel error when trying to open
+; this could mean file is not found, so let's try to find the file
+; to make life easier
+;
+; return c=0 if no error
+;
+alternate_open
+		pha				; preserve the initial error
+		stz try_count
+]try
+		jsr :copy_to_scratch
+		jsr :append_ext
+
+		lda #<scratch_path
+		ldx #>scratch_path
+		jsr fopen
+		bcc :opened
+
+		; this path didn't work
+		inc try_count
+		lda try_count
+		cmp #5 				; there are 5 extensions
+		bcc ]try
+; we failed 5 more times :-(
+		pla
+		rts
+
+:opened
+		lda #<scratch_path
+		ldx #>scratch_path
+		sta pArg  			; make sure when the file is re-opened it uses this working path
+		stx pArg+1
+
+		pla				; restore original error
+:rts
+		rts
+
+:append_ext
+		; at this point y points at the 0 terminator in the scratch path
+		lda try_count
+		asl
+		asl
+		tax
+]ext_loop
+		lda |ext_table,x
+		sta |scratch_path,y
+		beq :rts
+		inx
+		iny
+		bra ]ext_loop
+
+:copy_to_scratch
+		ldy #0
+]lp		lda (pArg),y
+		sta |scratch_path,y
+		beq :done_copy
+		iny
+		bne ]lp
+		; if we get here, things are fubar
+		dey
+		lda #0
+		sta |scratch_path,y
+		rts
+
+:done_copy
+		lda #'.'
+		sta |scratch_path,y  ; replace the 0 terminator
+		iny
+
+		lda #0
+		sta |scratch_path,y  ; zero terminate
+		rts
+
+
+;------------------------------------------------------------------------------
 ; Strings and other includes
-txt_version asc 'Pexec 0.61'
+txt_version asc 'Pexec 0.65'
 		db 13,13,0
 
 txt_press_key db 13
@@ -846,6 +984,14 @@ txt_open asc 'Open Success!'
 txt_no_argument asc 'Missing file argument'
 		db 13
 		db 0
+;------------------------------
+ext_table
+txt_pgz asc 'pgz',00
+txt_pgx asc 'pgx',00
+txt_kup asc 'kup',00
+txt_256 asc '256',00
+txt_lbm asc 'lbm',00
+;------------------------------
 
 txt_load_stuff asc 'Load your stuff: .pgx, .pgz, .kup, .lbm, .256',00
 
@@ -862,6 +1008,7 @@ txt_glyph_pexec
 		put file.s
 		put glyphs.s
 		put colors.s
+		put logo.s
 
 ; pad to the end
 		ds $C000-*,$EA

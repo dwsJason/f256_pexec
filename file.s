@@ -13,6 +13,7 @@ file_bytes_wrote ds 0
 file_bytes_read ds 3
 
 file_to_read ds 1
+file_open_drive ds 1
 		dend
 
 ;
@@ -40,7 +41,8 @@ fopen
 fcreate_open
 		sty kernel_args_file_open_mode
 
-		stz kernel_args_file_open_drive
+		ldy file_open_drive
+		sty kernel_args_file_open_drive
 
 		sta kernel_args_file_open_fname
 		stx kernel_args_file_open_fname+1
