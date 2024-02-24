@@ -239,13 +239,11 @@ start
 		; OMG there's a device!
 		; if it's valid, maybe it can overide the device 0
 
-		lda <pArg
-		pha
-		clc
-		adc #2
-		sta <pArg 		; fuck you if we need to wrap a page
+		lda (pArg)
 
-		pla
+		inc <pArg
+		inc <pArg 		; fuck you if we need to wrap a page
+
 		sec
 		sbc #'0'
 		cmp #10
@@ -904,7 +902,7 @@ alternate_open
 		lda try_count
 		cmp #5 				; there are 5 extensions
 		bcc ]try
-; we failed 4 more times :-(
+; we failed 5 more times :-(
 		pla
 		rts
 
@@ -957,7 +955,7 @@ alternate_open
 
 ;------------------------------------------------------------------------------
 ; Strings and other includes
-txt_version asc 'Pexec 0.64'
+txt_version asc 'Pexec 0.65'
 		db 13,13,0
 
 txt_press_key db 13
